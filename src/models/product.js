@@ -10,6 +10,11 @@ module.exports = (sequelize, DataTypes) => {
         otherKey: "rawMaterialId",
         as: "rawMaterials",
       });
+
+      Product.hasMany(models.ProductOutput, {
+        foreignKey: "productId",
+        as: "outputs",
+      });
     }
   }
 

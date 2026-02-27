@@ -4,11 +4,19 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Product extends Model {
     static associate(models) {
+      // 1. Mantemos o belongsToMany (para buscar as matérias primas direto)
       Product.belongsToMany(models.RawMaterial, {
         through: models.ProductRawMaterial,
         foreignKey: "productId",
         otherKey: "rawMaterialId",
         as: "rawMaterials",
+      });
+
+      // 2. ADICIONAMOS o hasMany (ESSA LINHA RESOLVE O SEU ERRO)
+      // Isso permite que o Service faça include: [database.ProductRawMaterial]
+      Product.hasMany(models.ProductRawMaterial, {
+        foreignKey: "productId",
+        as: "ProductRawMaterials",
       });
 
       Product.hasMany(models.ProductOutput, {

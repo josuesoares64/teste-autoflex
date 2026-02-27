@@ -4,14 +4,11 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class ProductRawMaterial extends Model {
     static associate(models) {
-      // Corrigido: Aqui deve ser no singular "product", 
-      // pois este registro específico pertence a UM produto.
       ProductRawMaterial.belongsTo(models.Product, {
         foreignKey: "productId",
         as: "product",
       });
 
-      // Aqui também pertence a UMA matéria-prima.
       ProductRawMaterial.belongsTo(models.RawMaterial, {
         foreignKey: "rawMaterialId",
         as: "rawMaterial",

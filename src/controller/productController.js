@@ -12,7 +12,6 @@ class ProductController extends Controller {
             const newRegister = await this.service.createWithMaterials(data);
             return res.status(201).json(newRegister);
         } catch (error) {
-            // Isso vai mostrar no seu terminal EXATAMENTE qual campo falhou
             console.error("DETALHE DO ERRO:", error.errors ? error.errors.map(e => e.message) : error.message);
             return res.status(400).json({ 
                 error: error.message, 

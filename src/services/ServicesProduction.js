@@ -220,7 +220,7 @@ class ProductionService {
       });
     }
 
-    // 🔥 ordena pelo maior retorno financeiro
+    // ordena pelo maior retorno financeiro
     result.sort((a, b) => b.totalValue - a.totalValue);
 
     return {

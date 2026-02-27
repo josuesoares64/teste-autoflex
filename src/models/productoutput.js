@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       productId: {
         type: DataTypes.UUID,
         allowNull: false,
-        field: 'productId', // 👈 coluna real
+        field: 'productId',
       },
 
       quantity: {
@@ -31,9 +31,9 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     {
-      tableName: 'product_outputs', // 👈 nome da tabela do print
+      tableName: 'product_outputs',
       timestamps: true,
-      underscored: false, // 👈 MUITO IMPORTANTE
+      underscored: false,
     }
   );
 

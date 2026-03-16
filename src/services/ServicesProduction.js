@@ -1,4 +1,7 @@
-const { Product, RawMaterial, ProductOutput } = require("../models");
+const db = require("../models");
+
+// Extrai tudo que você precisa do objeto 'db'
+const { sequelize, Product, RawMaterial, ProductOutput } = db;
 
 class ProductionService {
   async calculateProduction() {
@@ -27,7 +30,7 @@ class ProductionService {
     for (const product of products) {
       let maxPossible = Infinity;
 
-      // 🔹 calcula produção máxima
+      //  calcula produção máxima
       for (const rm of product.rawMaterials) {
         const stock = Number(rm.stockQuantity);
         const required = Number(rm.ProductRawMaterial.quantity);
@@ -88,73 +91,87 @@ class ProductionService {
   }
 
   async registerOutput({ productId, quantity }) {
-    if (!productId || !quantity) {
-      throw new Error("productId and quantity are required");
-    }
+    const transaction = await sequelize.transaction();
 
-    if (quantity <= 0) {
-      throw new Error("Quantity must be greater than zero");
-    }
-
-    // buscar produto com matéria-prima
-    const product = await Product.findByPk(productId, {
-      include: {
-        model: RawMaterial,
-        as: "rawMaterials",
-        attributes: ["stockQuantity"],
-        through: { attributes: ["quantity"] },
-      },
-    });
-
-    if (!product) {
-      throw new Error("Product not found");
-    }
-
-    // calcular quantidade máxima possível (mesma lógica)
-    let maxPossible = Infinity;
-
-    for (const rm of product.rawMaterials) {
-      const stock = Number(rm.stockQuantity);
-      const required = Number(rm.ProductRawMaterial.quantity);
-
-      const possibleByMaterial = Math.floor(stock / required);
-
-      if (possibleByMaterial < maxPossible) {
-        maxPossible = possibleByMaterial;
+    try {
+      // Validação
+      if (!productId || !quantity) {
+        throw new Error("productId and quantity are required");
       }
+
+      if (quantity <= 0) {
+        throw new Error("Quantity must be greater than zero");
+      }
+
+      // Buscar produto com matérias-primas
+      const product = await Product.findByPk(productId, {
+        include: {
+          model: RawMaterial,
+          as: "rawMaterials",
+          attributes: ["id", "stockQuantity"],
+          through: { attributes: ["quantity"] },
+        },
+        transaction,
+      });
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      // Verificar se há matéria-prima suficiente
+      for (const rm of product.rawMaterials) {
+        const required = Number(rm.ProductRawMaterial.quantity);
+        const stock = Number(rm.stockQuantity);
+
+        const needed = required * quantity;
+
+        if (stock < needed) {
+          throw new Error(
+            `Not enough stock for raw material ${rm.id}. Required: ${needed}, Available: ${stock}`,
+          );
+        }
+      }
+
+      // Dar baixa nas matérias-primas
+      for (const rm of product.rawMaterials) {
+        const required = Number(rm.ProductRawMaterial.quantity);
+        const used = required * quantity;
+
+        await rm.update(
+          {
+            stockQuantity: Number(rm.stockQuantity) - used,
+          },
+          { transaction },
+        );
+      }
+
+      const unitPrice = Number(product.price);
+      const totalValue = unitPrice * quantity;
+
+      // Registrar saída
+      const output = await ProductOutput.create(
+        {
+          productId,
+          quantity,
+          unitPrice,
+          totalValue,
+        },
+        { transaction },
+      );
+
+      await transaction.commit();
+
+      return {
+        message: "Output registered successfully",
+        output,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
-    if (maxPossible === Infinity) maxPossible = 0;
-
-    // somar já vendido
-    const totalSold =
-      (await ProductOutput.sum("quantity", {
-        where: { productId },
-      })) || 0;
-
-    const remainingQuantity = maxPossible - totalSold;
-
-    if (quantity > remainingQuantity) {
-      throw new Error(`Not enough stock. Available: ${remainingQuantity}`);
-    }
-
-    const unitPrice = Number(product.price);
-    const totalValue = unitPrice * quantity;
-
-    // criar movimento
-    const output = await ProductOutput.create({
-      productId,
-      quantity,
-      unitPrice,
-      totalValue,
-    });
-
-    return {
-      message: "Output registered successfully",
-      output,
-    };
   }
 
+  // Calcula produção considerando limites definidos pelo usuário
   async calculateWithLimits(limits = []) {
     // transforma limites em mapa
     const limitsMap = new Map(limits.map((l) => [l.productId, Number(l.max)]));
@@ -224,8 +241,9 @@ class ProductionService {
     result.sort((a, b) => b.totalValue - a.totalValue);
 
     return {
-      products: result,
-      totalProductionValue,
+      products: result, // result já contém productId, name, price, quantity, totalValue
+      totalPotentialValue: Number(totalProductionValue.toFixed(2)), // PADRONIZEI O NOME
+      totalRealizedValue: 0, // Como é simulação, não tem realizado, mas evita erro na UI
     };
   }
 }

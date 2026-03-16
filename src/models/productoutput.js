@@ -1,18 +1,20 @@
-'use strict';
+"use strict";
 
 module.exports = (sequelize, DataTypes) => {
   const ProductOutput = sequelize.define(
-    'ProductOutput',
+    "ProductOutput",
     {
       id: {
         type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
+        allowNull: false,
       },
 
       productId: {
         type: DataTypes.UUID,
         allowNull: false,
-        field: 'productId',
+        field: "productId",
       },
 
       quantity: {
@@ -22,25 +24,25 @@ module.exports = (sequelize, DataTypes) => {
 
       unitPrice: {
         type: DataTypes.DECIMAL(10, 2),
-        field: 'unitPrice',
+        field: "unitPrice",
       },
 
       totalValue: {
         type: DataTypes.DECIMAL(10, 2),
-        field: 'totalValue',
+        field: "totalValue",
       },
     },
     {
-      tableName: 'product_outputs',
+      tableName: "product_outputs",
       timestamps: true,
       underscored: false,
-    }
+    },
   );
 
   ProductOutput.associate = (models) => {
     ProductOutput.belongsTo(models.Product, {
-      foreignKey: 'productId',
-      as: 'product',
+      foreignKey: "productId",
+      as: "product",
     });
   };
 
